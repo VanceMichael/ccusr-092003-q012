@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "domain": "乌江桥节段水运吊装协同",
+  "required_fields": [
+    "segment_ref",
+    "revision",
+    "vessel_ref",
+    "water_window_ref",
+    "hoist_ref",
+    "stage"
+  ],
+  "time_format": "ISO 8601 with offset",
+  "sample": {
+    "segment_ref": "SEGMENT-07",
+    "revision": 2,
+    "vessel_ref": "VESSEL-A",
+    "stage": "transported"
+  }
+}
