@@ -1,5 +1,5 @@
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "domain": "乌江桥节段水运吊装协同",
   "required_fields": [
     "segment_ref",
@@ -10,10 +10,94 @@
     "stage"
   ],
   "time_format": "ISO 8601 with offset",
+  "actions": ["dispatch", "transship", "hoist", "install"],
+  "action_labels": {
+    "dispatch": "发运（浅水运输）",
+    "transship": "倒驳",
+    "hoist": "起吊",
+    "install": "安装就位"
+  },
+  "request_statuses": ["pending", "issued", "suspended", "completed", "cancelled"],
+  "evidence_kinds": [
+    "fabrication_acceptance",
+    "preassembly_acceptance",
+    "transfer_handover",
+    "environmental_waiver",
+    "reinspection"
+  ],
+  "evidence_results": ["pass", "fail", "note"],
+  "change_types": ["water", "equipment", "reinspection"],
+  "restriction_levels": ["prohibit", "restrict"],
+  "resource_types": ["vessel", "hoist", "bank"],
+  "gate_principle": "前序证据与当前窗口同时成立，动作才可签发；签发在 BEGIN IMMEDIATE 事务内重算闸门并占用资源租约",
+  "blocker_codes": [
+    "segment_unknown",
+    "revision_mismatch",
+    "revision_unknown",
+    "previous_action_incomplete",
+    "evidence_missing",
+    "evidence_failed",
+    "evidence_not_passed",
+    "evidence_expired",
+    "window_not_covered",
+    "environmental_prohibited",
+    "environmental_waiver_missing",
+    "vessel_required",
+    "vessel_unknown",
+    "vessel_unavailable",
+    "vessel_recheck_failed",
+    "loading_not_recorded",
+    "vessel_overloaded",
+    "vessel_draft_exceeds",
+    "channel_reading_missing",
+    "channel_too_shallow",
+    "channel_points_required",
+    "vessel_lease_conflict",
+    "hoist_required",
+    "hoist_unknown",
+    "hoist_unavailable",
+    "hoist_recheck_failed",
+    "hoist_capacity_exceeded",
+    "hoist_lease_conflict",
+    "bank_unknown",
+    "bank_not_ready",
+    "banks_required",
+    "install_sequence_blocked"
+  ],
+  "endpoints": {
+    "registry": {
+      "POST /admin/segments": "登记节段与安装序号、首版本",
+      "POST /admin/segments/revision": "构件版本升级（旧申请作废、租约释放）",
+      "POST /admin/evidence": "登记证据（只存受控引用或 sha256 摘要；全局豁免允许 segment_ref 为空）",
+      "POST /admin/windows": "登记/更新水位窗口",
+      "POST /admin/restrictions": "环保禁止/限制时段",
+      "POST /admin/vessels": "船舶与载荷、吃水限值",
+      "POST /admin/hoists": "缆索吊与起重能力",
+      "POST /admin/banks": "两岸就位条件",
+      "POST /admin/loadings": "实际配载与吃水",
+      "POST /admin/channel-readings": "航道点最新水深"
+    },
+    "workflow": {
+      "POST /requests": "提出动作申请并返回即时闸门快照",
+      "POST /requests/:ref/issue": "签发（条件不全返回 412 与阻塞码）",
+      "POST /requests/:ref/complete": "完成（完成前条件失效则挂起）",
+      "POST /requests/:ref/cancel": "取消并释放资源",
+      "POST /changes": "水位/设备/复检变化，事务内立即重算受影响环节"
+    },
+    "query": {
+      "GET /requests": "按 status / segment_ref 过滤",
+      "GET /requests/:ref": "单个申请（含闸门快照与租约）",
+      "GET /segments/:ref": "节段与全部版本",
+      "GET /segments/:ref/trace": "节点反查：制造、运输、交接、安装证据与完整生命周期",
+      "GET /closure": "37 节段合龙进度与既定序列"
+    }
+  },
   "sample": {
     "segment_ref": "SEGMENT-07",
     "revision": 2,
     "vessel_ref": "VESSEL-A",
+    "window_ref": "WIN-DEMO-1",
+    "hoist_ref": "HOIST-MAIN",
     "stage": "transported"
   }
 }

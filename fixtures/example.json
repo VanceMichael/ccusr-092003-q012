@@ -1,6 +1,52 @@
 {
-  "segment_ref": "SEGMENT-07",
+  "scenario": "节段到达倒驳点后水电站临时改变水位窗口，现场申请提前起吊",
+  "segment_ref": "SEG-07",
   "revision": 2,
   "vessel_ref": "VESSEL-A",
-  "stage": "transported"
+  "window_ref": "WIN-2",
+  "hoist_ref": "HOIST-MAIN",
+  "stage": "transshipped",
+  "early_hoist_request": {
+    "request_ref": "REQ-SEG-07-HOIST-EARLY",
+    "segment_ref": "SEG-07",
+    "revision": 2,
+    "action": "hoist",
+    "hoist_ref": "HOIST-MAIN",
+    "scheduled_start": "2026-09-23T05:00:00+08:00",
+    "scheduled_end": "2026-09-23T05:40:00+08:00",
+    "requester": "SITE-FOREMAN"
+  },
+  "expected_gate": {
+    "ok": false,
+    "blockers": ["window_not_covered", "previous_action_incomplete", "evidence_missing"]
+  },
+  "required_chain": [
+    {
+      "action": "dispatch",
+      "requires_evidence": ["fabrication_acceptance", "preassembly_acceptance"],
+      "requires_window_coverage": true,
+      "resource": "vessel"
+    },
+    {
+      "action": "transship",
+      "requires_evidence": [],
+      "requires_window_coverage": true,
+      "resource": "vessel"
+    },
+    {
+      "action": "hoist",
+      "requires_evidence": ["preassembly_acceptance", "transfer_handover"],
+      "requires_window_coverage": true,
+      "resource": "hoist"
+    },
+    {
+      "action": "install",
+      "requires_evidence": [],
+      "requires_window_coverage": true,
+      "resource": "hoist",
+      "requires_banks": true,
+      "requires_install_predecessors": true
+    }
+  ],
+  "note": "示例编号均为受控引用，不含真实身份；时间为带偏移量 ISO 8601。"
 }
