@@ -1,10 +1,13 @@
 {
   "name": "bridge-segment-hoist",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node src/server.js",
+    "prestart": "node scripts/migrate.js && node scripts/seed.js",
     "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "demo": "node scripts/demo.js",
     "test": "node --test"
   }
 }

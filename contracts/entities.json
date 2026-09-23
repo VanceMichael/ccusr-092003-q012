@@ -1,6 +1,14 @@
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "domain": "乌江桥节段水运吊装协同",
+  "principles": [
+    "以构件版本（segment_revisions）与既定安装序列（install_plan）为主线",
+    "只有前序证据与当前窗口同时成立，下一动作才可签发（permits.gate_report_json 留痕每项闸门）",
+    "证据只追加（evidence_events），复检以指向旧证据的新事件表达，不覆盖历史",
+    "水位/设备/复检/环保变化立即重算受影响环节（impact_reports），并吊销不再成立的生效许可",
+    "同一运输/吊装资源的并发申请只准一个生效（resource_grants 部分唯一索引）",
+    "合龙完成后从节点可反查每个节段的制造、运输、交接、安装证据"
+  ],
   "required_fields": [
     "segment_ref",
     "revision",
@@ -10,10 +18,37 @@
     "stage"
   ],
   "time_format": "ISO 8601 with offset",
+  "stages": ["fabricated", "accepted", "transported", "transferred", "installed"],
+  "actions": {
+    "transport": { "resource": "vessel", "requires_evidence": ["fabricated", "accepted"] },
+    "transfer": { "resource": "vessel", "requires_evidence": ["transported"] },
+    "hoist": { "resource": "hoist", "requires_evidence": ["transferred"], "requires_predecessor_installed": true }
+  },
+  "gate_checks": [
+    "revision",
+    "recheck_<stage>",
+    "precedence_<stage>",
+    "predecessor_installed",
+    "resource_status",
+    "capacity",
+    "window_present",
+    "window_valid",
+    "window_open",
+    "channel_depth",
+    "banks_ready",
+    "environmental_ban",
+    "active_permit"
+  ],
+  "endpoints": {
+    "GET": ["/health", "/plan", "/segments/{ref}/trace", "/events", "/vessels", "/hoists", "/banks", "/water-windows", "/environmental-bans", "/permits", "/permits/{id}", "/impact-reports", "/closure"],
+    "POST": ["/segments", "/segments/{ref}/revisions", "/events", "/vessels", "/hoists", "/devices/status", "/banks", "/water-windows", "/channel-observations", "/environmental-bans", "/gate/evaluate", "/permits", "/permits/{id}/complete", "/impact/recompute", "/closure/close"]
+  },
   "sample": {
     "segment_ref": "SEGMENT-07",
     "revision": 2,
     "vessel_ref": "VESSEL-A",
-    "stage": "transported"
+    "water_window_ref": "WIN-NAV-01",
+    "hoist_ref": "HOIST-N1",
+    "stage": "transferred"
   }
 }

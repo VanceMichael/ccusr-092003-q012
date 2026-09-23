@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>乌江特大桥节段吊装协同控制室</title>
+<style>
+  :root{
+    --bg:#0e141b; --panel:#161f29; --line:#263442; --text:#dbe5ee; --muted:#8298aa;
+    --ok:#34d399; --bad:#f87171; --warn:#fbbf24; --info:#60a5fa; --accent:#38bdf8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#111a23}
+  header h1{font-size:17px;margin:0;font-weight:600}
+  header .meta{color:var(--muted);font-size:12px}
+  main{padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1500px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+  .panel.wide{grid-column:1/-1}
+  .panel h2{font-size:14px;margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .panel h2 .hint{font-weight:400;color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+  .scroll{max-height:300px;overflow:auto}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;border:1px solid var(--line)}
+  .ok{color:var(--ok);border-color:#1b5e48;background:#0f2a22}
+  .bad{color:var(--bad);border-color:#5e2323;background:#2a1414}
+  .warn{color:var(--warn);border-color:#5e4b1b;background:#2a230f}
+  .info{color:var(--info);border-color:#1e3a5e;background:#101f30}
+  .muted{color:var(--muted)}
+  .stages{display:flex;gap:4px}
+  .dot{width:11px;height:11px;border-radius:3px;background:#243240;display:inline-block}
+  .dot.pass{background:var(--ok)} .dot.fail{background:var(--bad)} .dot.warn{background:var(--warn)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input,button,textarea{background:#0f1720;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 9px;font:inherit}
+  button{cursor:pointer}
+  button.primary{background:#0c4a6e;border-color:#075985;color:#e0f2fe}
+  button.danger{background:#7f1d1d;border-color:#991b1b;color:#fee2e2}
+  button:hover{filter:brightness(1.15)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kv{font-size:12.5px;color:var(--muted)}
+  .kv b{color:var(--text);font-weight:500}
+  pre{background:#0c131a;border:1px solid var(--line);border-radius:8px;padding:10px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;overflow:auto;max-height:420px;white-space:pre-wrap;word-break:break-word}
+  #toast{position:fixed;right:18px;bottom:18px;max-width:440px;display:flex;flex-direction:column;gap:8px;z-index:9}
+  .toast{padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:#111c26;box-shadow:0 8px 24px #0008}
+  .toast.bad{border-color:#7f1d1d}.toast.ok{border-color:#1b5e48}.toast.warn{border-color:#5e4b1b}
+  .checkline{display:flex;gap:8px;align-items:flex-start;padding:3px 0;font-size:12.5px}
+  .checkline .mk{font-weight:700}
+  .timeline li{margin-bottom:6px}
+  .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-left:4px}
+  .bar{height:6px;background:#243240;border-radius:3px;overflow:hidden;margin-top:6px}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,#0ea5e9,#34d399)}
+</style>
+</head>
+<body>
+<header>
+  <h1>乌江特大桥 · 节段水运吊装协同控制室</h1>
+  <span class="meta">主线：构件版本 + 既定合龙序列 ｜ 前序证据与当前窗口同时成立才签发 ｜ 同资源并发只准一个生效</span>
+  <span style="flex:1"></span>
+  <span class="meta" id="clock"></span>
+  <button onclick="loadAll()">刷新</button>
+</header>
+
+<main>
+  <section class="panel wide">
+    <h2>合龙序列（37 节段）<span class="hint">色格依次：制造 · 预拼验收 · 运输 · 倒驳交接 · 安装；点击节段号反查证据</span></h2>
+    <div class="row" style="margin-bottom:8px">
+      <span class="kv">进度 <b id="prog-text"></b></span>
+      <div class="bar" style="width:260px"><i id="prog-bar" style="width:0%"></i></div>
+    </div>
+    <div class="scroll">
+      <table id="plan-table">
+        <thead><tr><th>#</th><th>节段</th><th>版本</th><th>重量(t)</th><th>状态</th><th>证据链</th><th>安装</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>动作签发申请<span class="hint">闸门全部为绿才放行</span></h2>
+    <div class="grid2">
+      <select id="f-segment"></select>
+      <select id="f-action"><option value="transport">运输（船舶）</option><option value="transfer">倒驳交接（船舶）</option><option value="hoist">起吊安装（缆索吊）</option></select>
+      <select id="f-resource"></select>
+      <select id="f-window"></select>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button onclick="evaluateGate()">闸门试算</button>
+      <button class="primary" onclick="issuePermit()">签发许可</button>
+    </div>
+    <div id="gate-out" style="margin-top:10px"></div>
+  </section>
+
+  <section class="panel">
+    <h2>现场条件</h2>
+    <div class="grid2">
+      <div>
+        <div class="kv" style="margin-bottom:4px">缆索吊</div>
+        <div id="dev-hoists"></div>
+        <div class="kv" style="margin:8px 0 4px">船舶 / 驳船</div>
+        <div id="dev-vessels"></div>
+      </div>
+      <div>
+        <div class="kv" style="margin-bottom:4px">两岸条件</div>
+        <div id="dev-banks"></div>
+        <div class="kv" style="margin:8px 0 4px">水位窗口 / 环保时段</div>
+        <div id="dev-windows"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="danger" onclick="publishEmergencyWindow()">模拟：水电站临时改变窗口（新窗口未开启）</button>
+    </div>
+  </section>
+
+  <section class="panel wide">
+    <h2>生效与历史许可<span class="hint">吊销原因来自水位/设备/环保/复检的即时重算</span></h2>
+    <div class="scroll"><table id="permit-table"><thead>
+      <tr><th>#</th><th>节段</th><th>版本</th><th>动作</th><th>资源</th><th>窗口</th><th>有效期</th><th>状态</th><th>吊销原因</th></tr>
+    </thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>变化影响报告<span class="hint">水位 · 设备 · 复检 · 环保触发即算</span></h2>
+    <div class="scroll"><table id="impact-table"><thead>
+      <tr><th>#</th><th>触发</th><th>吊销许可</th><th>受影响节段</th></tr>
+    </thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>节段证据反查<span class="hint">合龙后仍可看到制造→运输→交接→安装全过程证据</span></h2>
+    <div class="row">
+      <select id="t-segment" style="flex:1"></select>
+      <button onclick="loadTrace()">反查</button>
+    </div>
+    <div id="trace-out" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (s) => s ? new Date(s).toLocaleString("zh-CN", { hour12:false }) : "";
+const STAGE_NAMES = {fabricated:"制造", accepted:"预拼验收", transported:"运输", transferred:"倒驳交接", installed:"安装"};
+const ACTION_NAMES = {transport:"运输", transfer:"倒驳交接", hoist:"起吊安装"};
+
+async function api(path, options={}) {
+  const res = await fetch(path, { headers:{"content-type":"application/json"}, ...options });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || ("HTTP "+res.status)), { data });
+  return data;
+}
+function toast(msg, kind="") {
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.textContent = msg;
+  $("toast").appendChild(el);
+  setTimeout(()=>el.remove(), 6000);
+}
+function esc(s){return String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+async function loadAll() {
+  const [plan, vessels, hoists, banks, windows, bans, permits, impacts] = await Promise.all([
+    api("/plan"), api("/vessels"), api("/hoists"), api("/banks"),
+    api("/water-windows"), api("/environmental-bans"),
+    api("/permits"), api("/impact-reports"),
+  ]);
+  renderPlan(plan.steps);
+  renderSelectors(plan.steps);
+  renderDevices(vessels.vessels, hoists.hoists, banks.banks, windows.windows, bans.bans);
+  renderPermits(permits.permits);
+  renderImpacts(impacts.reports);
+}
+
+function renderPlan(steps) {
+  const tb = $("plan-table").tBodies[0];
+  tb.innerHTML = steps.map(s => {
+    const order = ["fabricated","accepted","transported","transferred","installed"];
+    const dots = order.map(k => {
+      const e = s.evidence[k];
+      const cls = e.pass ? "pass" : (e.present && !e.pass ? "fail" : "");
+      return `<span class="dot ${cls}" title="${STAGE_NAMES[k]} ${e.reason}"></span>`;
+    }).join("");
+    const installed = s.installed;
+    return `<tr>
+      <td>${s.install_order}</td>
+      <td><a href="#" onclick="pickTrace('${s.segment_ref}');return false">${s.segment_ref}</a></td>
+      <td>v${s.revision}</td>
+      <td>${s.weight_t ?? ""}</td>
+      <td>${esc(s.segment_status)}</td>
+      <td><span class="stages">${dots}</span></td>
+      <td>${installed?'<span class="pill ok">已安装</span>':'<span class="pill warn">待安装</span>'}</td>
+    </tr>`;
+  }).join("");
+  const n = steps.filter(s=>s.installed).length;
+  $("prog-text").textContent = `${n} / ${steps.length}`;
+  $("prog-bar").style.width = (steps.length ? n/steps.length*100 : 0) + "%";
+}
+
+function renderSelectors(steps) {
+  const opts = steps.map(s=>`<option value="${s.segment_ref}">${s.segment_ref}（#${s.install_order} v${s.revision}）</option>`).join("");
+  if (!$("f-segment").dataset.filled) { $("f-segment").innerHTML = opts; $("f-segment").dataset.filled="1"; }
+  else { const cur=$("f-segment").value; $("f-segment").innerHTML=opts; $("f-segment").value=cur; }
+  if (!$("t-segment").dataset.filled) { $("t-segment").innerHTML = opts; $("t-segment").dataset.filled="1"; }
+}
+
+function renderDevices(vessels, hoists, banks, windows, bans) {
+  $("dev-hoists").innerHTML = hoists.map(h =>
+    `<div class="kv">${h.hoist_ref} · ${h.capacity_t}t · <span class="${h.status==='available'?'pill ok':'pill bad'}">${h.status}</span></div>`).join("") || '<span class="muted">无</span>';
+  $("dev-vessels").innerHTML = vessels.map(v =>
+    `<div class="kv">${v.vessel_ref} · 载${v.capacity_t}t · 吃水${v.draft_m}m · <span class="${v.status==='available'?'pill ok':'pill bad'}">${v.status}</span></div>`).join("") || '<span class="muted">无</span>';
+  $("dev-banks").innerHTML = banks.map(b =>
+    `<div class="kv">${b.bank_ref}：${b.ready?'<span class="pill ok">具备</span>':'<span class="pill bad">不具备</span>'}</div>`).join("") || '<span class="muted">无</span>';
+  const now = Date.now();
+  $("dev-windows").innerHTML = windows.map(w => {
+    const open = w.valid && new Date(w.starts_at)<=now && now<new Date(w.ends_at);
+    const cls = !w.valid ? "bad" : open ? "ok" : "warn";
+    const txt = !w.valid ? "已被取代" : open ? "开启中" : "未开启";
+    return `<div class="kv">${w.window_ref} · ${w.channel_ref} · 水深≥${w.min_depth_m}m · <span class="pill ${cls}">${txt}</span><br><span class="muted">${fmt(w.starts_at)} → ${fmt(w.ends_at)}</span>${w.superseded_by?` <span class="tag">→ ${w.superseded_by}</span>`:""}</div>`;
+  }).join("") + bans.map(b=>`<div class="kv" style="margin-top:4px">🚫 ${b.ban_ref} · ${b.scope==='all'?'全限':b.scope==='hoist'?'禁吊':'禁航'} · ${esc(b.reason||"")}</div>`).join("");
+  $("f-window").innerHTML = windows.filter(w=>w.valid).map(w=>`<option value="${w.window_ref}">${w.window_ref}</option>`).join("");
+  syncResourceOptions();
+}
+
+function syncResourceOptions() {
+  const action = $("f-action").value;
+  Promise.all([api("/vessels"), api("/hoists")]).then(([v,h]) => {
+    const list = action === "hoist" ? h.hoists.map(x=>[x.hoist_ref,x.status]) : v.vessels.map(x=>[x.vessel_ref,x.status]);
+    const cur = $("f-resource").value;
+    $("f-resource").innerHTML = list.map(([r,st])=>`<option value="${r}">${r}（${st}）</option>`).join("");
+    if (list.some(([r])=>r===cur)) $("f-resource").value = cur;
+  });
+}
+$("f-action")?.addEventListener("change", syncResourceOptions);
+
+function statusPill(status) {
+  const map = {issued:["ok","生效中"], completed:["info","已完成"], voided:["bad","已吊销"]};
+  const [c,t] = map[status] || ["warn",status];
+  return `<span class="pill ${c}">${t}</span>`;
+}
+
+function renderPermits(permits) {
+  $("permit-table").tBodies[0].innerHTML = permits.map(p=>`<tr>
+    <td>${p.permit_id}</td><td><a href="#" onclick="pickTrace('${p.segment_ref}');return false">${p.segment_ref}</a></td>
+    <td>v${p.revision}</td><td>${ACTION_NAMES[p.action]}</td><td>${p.resource_ref}</td>
+    <td>${p.window_ref}</td><td class="muted">${fmt(p.valid_from)}<br>${fmt(p.valid_until)}</td>
+    <td>${statusPill(p.status)}${p.status==='issued'?` <button onclick="completePermit(${p.permit_id})">完成</button>`:""}</td>
+    <td class="muted">${esc(p.void_reason||"")}</td></tr>`).join("");
+}
+
+function renderImpacts(reports) {
+  $("impact-table").tBodies[0].innerHTML = reports.map(r=>{
+    const detail = r.detail || {};
+    const voided = (detail.voided_permit_ids||[]).length;
+    const affected = (detail.affected_segments||[]).map(a=>a.segment_ref).length;
+    return `<tr><td>${r.report_id}</td>
+      <td>${r.trigger_type}<br><span class="muted">${esc(r.trigger_ref)}</span></td>
+      <td>${voided?`<span class="pill bad">${voided}</span>`:"—"}</td>
+      <td>${affected?`<span class="pill warn">${affected}</span>`:"—"}<div class="muted" style="max-width:300px;white-space:normal">${
+        (detail.affected_segments||[]).slice(0,6).map(a=>`${a.segment_ref}(${a.reasons.join(",")})`).join("；")
+      }</div></td></tr>`;
+  }).join("");
+}
+
+function gatePayload() {
+  return { segment_ref:$("f-segment").value, action:$("f-action").value,
+    resource_ref:$("f-resource").value, window_ref:$("f-window").value };
+}
+
+async function evaluateGate() {
+  try {
+    const g = await api("/gate/evaluate", { method:"POST", body: JSON.stringify(gatePayload()) });
+    $("gate-out").innerHTML = g.ok
+      ? `<div class="pill ok">全部闸门通过，可以签发</div>` + checksHtml(g.checks)
+      : `<div class="pill bad">闸门未通过：${g.checks.filter(c=>!c.ok).map(c=>c.label).join("；")}</div>` + checksHtml(g.checks);
+  } catch(e) { $("gate-out").innerHTML = `<div class="pill bad">${esc(e.message)}</div>`; }
+}
+function checksHtml(checks=[]) {
+  return checks.map(c=>`<div class="checkline"><span class="mk ${c.ok?'ok':'bad'}">${c.ok?"✓":"✗"}</span><span>${esc(c.label)}</span></div>`).join("");
+}
+async function issuePermit() {
+  try {
+    const r = await api("/permits", { method:"POST", body: JSON.stringify(gatePayload()) });
+    toast(`许可 #${r.permit.permit_id} 已签发，资源 ${r.permit.resource_ref} 占用至 ${fmt(r.permit.valid_until)}`, "ok");
+    $("gate-out").innerHTML = `<div class="pill ok">许可 #${r.permit.permit_id} 生效</div>` + checksHtml(r.permit.gate_report.checks);
+  } catch(e) {
+    if (e.data?.status === 409) {
+      toast(`并发冲突：${e.data.conflict.resource_ref} 已被许可 #${e.data.conflict.held_by_permit} 占用，本申请未生效`, "bad");
+      $("gate-out").innerHTML = `<div class="pill bad">同一资源并发申请只准一个生效（占用方 #${e.data.conflict.held_by_permit}）</div>`;
+    } else {
+      const c = e.data?.gate?.checks?.find(x=>!x.ok);
+      toast(`签发被拒：${c ? c.label : e.message}`, "bad");
+      $("gate-out").innerHTML = `<div class="pill bad">${esc(c?c.label:e.message)}</div>` + checksHtml(e.data?.gate?.checks);
+    }
+  }
+  loadAll();
+}
+async function completePermit(id) {
+  try { await api(`/permits/${id}/complete`, { method:"POST", body:"{}" }); toast(`许可 #${id} 完成并释放资源`, "ok"); }
+  catch(e){ toast("完成失败："+e.message,"bad"); }
+  loadAll();
+}
+async function publishEmergencyWindow() {
+  const now = Date.now();
+  const ref = "WIN-EMG-" + new Date().toISOString().slice(11,19).replaceAll(":","");
+  try {
+    const r = await api("/water-windows", { method:"POST", body: JSON.stringify({
+      window_ref: ref, channel_ref:"CH-MAIN", level_m: 214.2, min_depth_m: 1.4,
+      starts_at: new Date(now + 3*3600e3).toISOString(), ends_at: new Date(now + 9*3600e3).toISOString(),
+      source:"上游水电站临时调度"
+    })});
+    const n = r.impact.voided_permit_ids.length;
+    toast(`新窗口 ${ref} 已发布（3 小时后才开启）；${n} 个生效许可被即时吊销，吊装顺序需重排`, n ? "bad":"warn");
+  } catch(e){ toast("发布失败："+e.message,"bad"); }
+  loadAll();
+}
+
+async function pickTrace(ref) { $("t-segment").value = ref; await loadTrace(); }
+async function loadTrace() {
+  const ref = $("t-segment").value;
+  const t = await api(`/segments/${encodeURIComponent(ref)}/trace`);
+  const closure = await api("/closure");
+  const closedNote = closure.closed ? `<div class="pill ok">合龙已完成（${closure.installed}/${closure.total}），证据完整可溯</div>` : "";
+  $("trace-out").innerHTML = closedNote + `
+    <div class="kv" style="margin:6px 0">当前版本 <b>v${t.segment.revision}</b> ｜ 合龙顺序 <b>#${t.plan?.install_order ?? "-"}</b> ｜ 状态 <b>${esc(t.segment.status)}</b></div>
+    <ul class="timeline" style="padding-left:18px">
+      ${t.stages.flatMap(s=>s.events.map(ev=>`<li>
+        <span class="pill ${ev.event_type==='recheck' ? (ev.disposition==='pass'?'ok':'bad') : 'info'}">
+          ${ev.event_type==='recheck' ? "复检·"+(ev.disposition==='pass'?"通过":"不通过") : s.label}
+        </span>
+        <span class="tag">v${ev.revision}</span>
+        <span class="muted">${fmt(ev.occurred_at)}</span>
+        ${ev.actor_ref?`<span class="muted">主体 ${esc(ev.actor_ref)}</span>`:""}
+        ${ev.supersedes_event?`<span class="muted">指向证据 #${ev.supersedes_event}</span>`:""}
+        ${ev.source_digest?`<span class="tag">sha256:${esc(String(ev.source_digest).slice(0,12))}…</span>`:""}
+      </li>`)).join("") || '<li class="muted">暂无证据</li>'}
+    </ul>
+    <details><summary class="muted">许可与闸门留痕（${t.permits.length}）</summary>
+      ${t.permits.map(p=>`<div style="margin-top:6px">#${p.permit_id} ${ACTION_NAMES[p.action]} → ${p.resource_ref} ${statusPill(p.status)}
+        ${p.void_reason?`<span class="muted">${esc(p.void_reason)}</span>`:""}</div>`).join("")}
+    </details>`;
+}
+
+function tick(){ $("clock").textContent = new Date().toLocaleString("zh-CN",{hour12:false}); }
+setInterval(tick,1000); tick();
+loadAll().catch(e=>toast("初始加载失败："+e.message,"bad"));
+setInterval(loadAll, 15000);
+</script>
+</body>
+</html>

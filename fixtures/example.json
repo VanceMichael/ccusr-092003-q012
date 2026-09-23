@@ -1,6 +1,14 @@
 {
   "segment_ref": "SEGMENT-07",
-  "revision": 2,
-  "vessel_ref": "VESSEL-A",
-  "stage": "transported"
+  "revision": 1,
+  "stage": "transferred",
+  "next_action": "hoist",
+  "requires": {
+    "precedence_evidence": ["fabricated", "accepted", "transported", "transferred"],
+    "predecessor_installed": "SEGMENT-06",
+    "resource": { "type": "hoist", "ref": "HOIST-N1", "capacity_t": 260 },
+    "water_window_ref": "WIN-NAV-01",
+    "banks": ["NORTH", "SOUTH"],
+    "environmental_ban": "none_active"
+  }
 }
